@@ -1012,6 +1012,18 @@ bool sevalue_to_native(const se::Value &from, ccstd::vector<bool> *to, se::Objec
 }
 
 // NOLINTNEXTLINE(readability-identifier-naming)
+bool sevalue_to_native(const se::Value &from, ccstd::variant<ccstd::string, bool> *to, se::Object * /*ctx*/) {
+    if (from.isBoolean()) {
+        *to = from.toBoolean();
+    } else if (from.isString()) {
+        *to = from.toString();
+    } else {
+        CC_ASSERT(false);
+    }
+    return true;
+}
+
+// NOLINTNEXTLINE(readability-identifier-naming)
 bool sevalue_to_native(const se::Value &from, ccstd::vector<unsigned char> *to, se::Object * /*ctx*/) {
     if (from.isNullOrUndefined()) {
         to->clear();
@@ -1166,9 +1178,12 @@ bool seval_to_Map_string_key(const se::Value &v, cc::RefMap<ccstd::string, cc::m
 
     se::Value tmp;
     for (const auto &key : allKeys) {
-        auto pngPos = key.find(".png");
-        if (pngPos == ccstd::string::npos) {
-            continue;
+        auto picExist = key.find(".png");
+        if (picExist == ccstd::string::npos) {
+            picExist = key.find(".jpg");
+            if (picExist == ccstd::string::npos) {
+                continue;
+            }
         }
 
         ok = obj->getProperty(key.c_str(), &tmp);

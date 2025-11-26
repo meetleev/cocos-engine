@@ -383,7 +383,6 @@ public:
                 WindowEvent ev;
                 ev.type = WindowEvent::Type::CLOSE;
                 events::WindowEvent::broadcast(ev);
-                _androidPlatform->onDestroy();
                 break;
             }
             case APP_CMD_STOP: {
@@ -588,26 +587,31 @@ int32_t AndroidPlatform::run(int /*argc*/, const char ** /*argv*/) {
     return 0;
 }
 
+void AndroidPlatform::exit() {
+    _app->destroyRequested = 1;
+}
 int32_t AndroidPlatform::loop() {
     IXRInterface *xr = CC_GET_XR_INTERFACE();
     while (true) {
-        int events;
         struct android_poll_source *source;
 
         // suspend thread while _loopTimeOut set to -1
-        while ((ALooper_pollAll(_loopTimeOut, nullptr, &events,
-                                reinterpret_cast<void **>(&source))) >= 0) {
-            // process event
+        while (ALooper_pollOnce(_loopTimeOut, nullptr, nullptr,
+                                reinterpret_cast<void **>(&source)) >= 0) {
+            // Process event
             if (source != nullptr) {
                 source->process(_app, source);
             }
 
             // Exit the game loop when the Activity is destroyed
             if (_app->destroyRequested) {
-                return 0;
+                break;
             }
         }
-
+        // Exit the game loop when the Activity is destroyed
+        if (_app->destroyRequested) {
+            break;
+        }
         if (xr && !xr->platformLoopStart()) continue;
         _inputProxy->handleInput();
         if (_inputProxy->isAnimating() && (xr ? xr->getXRConfig(xr::XRConfigKey::SESSION_RUNNING).getBool() : true)) {
@@ -631,6 +635,8 @@ int32_t AndroidPlatform::loop() {
 #endif
         if (xr) xr->platformLoopEnd();
     }
+    onDestroy();
+    return 0;
 }
 
 void AndroidPlatform::pollEvent() {

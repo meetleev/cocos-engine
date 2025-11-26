@@ -82,6 +82,18 @@ if(USE_SERVER_MODE)
     add_definitions(-DCC_SERVER_MODE)
 endif()
 
+# Fix the issue: https://github.com/cocos/cocos-engine/issues/16190
+# std::unary_function was removed since clang 15
+# The macro has already been defined in boost/config/stdlib/dinkumware.hpp(258,1),
+# so no need to define it again to avoid 'macro redefinition' error.
+if(NOT WINDOWS)
+    add_definitions(-DBOOST_NO_CXX98_FUNCTION_BASE)
+endif()
+
+# https://stackoverflow.com/questions/78598141/first-stdmutexlock-crashes-in-application-built-with-latest-visual-studio
+if(WINDOWS)
+    add_definitions(-D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
+endif()
 
 add_definitions(-DCC_NETMODE_CLIENT=0)
 add_definitions(-DCC_NETMODE_LISTEN_SERVER=1)
@@ -431,6 +443,7 @@ cocos_source_files(
     cocos/base/etc1.h
     cocos/base/etc2.cpp
     cocos/base/etc2.h
+    cocos/base/HasMemberFunction.h
     cocos/base/IndexHandle.h
     cocos/base/Locked.h
     cocos/base/Macros.h
@@ -513,7 +526,7 @@ cocos_source_files(
 )
 
 ############ main
-if(NOT USE_SERVER_MODE AND (WINDOWS OR LINUX))
+if(NOT USE_SERVER_MODE AND (WINDOWS OR LINUX OR MACOSX))
 cocos_source_files(
     cocos/platform/SDLHelper.h
     cocos/platform/SDLHelper.cpp
@@ -673,9 +686,14 @@ elseif(ANDROID OR OHOS)
         cocos/platform/java/modules/SystemWindow.h
         cocos/platform/java/modules/SystemWindowManager.cpp
         cocos/platform/java/modules/SystemWindowManager.h
-        cocos/platform/java/modules/XRInterface.cpp
-        cocos/platform/java/modules/XRInterface.h
     )
+
+    if(USE_XR)
+        cocos_source_files(
+            cocos/platform/java/modules/XRInterface.cpp
+            cocos/platform/java/modules/XRInterface.h
+        )
+    endif()
 endif()
 
 if(ANDROID)
@@ -975,6 +993,9 @@ if(WINDOWS OR MACOSX OR LINUX OR QNX)
     )
 endif()
 
+set(SWIG_OUTPUT_ROOT ${CMAKE_CURRENT_BINARY_DIR}/generated)
+set(SWIG_OUTPUT ${SWIG_OUTPUT_ROOT}/cocos/bindings/auto)
+cc_gen_swig_files(${CMAKE_CURRENT_LIST_DIR}/tools/swig-config ${SWIG_OUTPUT})
 
 ##### platform
 cocos_source_files(
@@ -1499,20 +1520,12 @@ cocos_source_files(
 
 ##### components
 cocos_source_files(
-    # cocos/core/components/Component.h
-    # cocos/core/components/Component.cpp
-    # cocos/core/components/RenderableComponent.h
-    # cocos/core/components/RenderableComponent.cpp
-    # cocos/core/components/CameraComponent.h
-    # cocos/core/components/CameraComponent.cpp
     cocos/3d/models/BakedSkinningModel.h
     cocos/3d/models/BakedSkinningModel.cpp
     cocos/3d/models/MorphModel.h
     cocos/3d/models/MorphModel.cpp
     cocos/3d/models/SkinningModel.h
     cocos/3d/models/SkinningModel.cpp
-    # cocos/3d/framework/MeshRenderer.h
-    # cocos/3d/framework/MeshRenderer.cpp
 )
 
 ##### animations
@@ -1848,8 +1861,8 @@ if(USE_PHYSICS_PHYSX)
         cocos/physics/physx/joints/PhysXSpherical.cpp
     )
     cocos_source_files(
-        NO_WERROR NO_UBUILD cocos/bindings/auto/jsb_physics_auto.cpp
-                            cocos/bindings/auto/jsb_physics_auto.h
+        NO_WERROR NO_UBUILD ${SWIG_OUTPUT}/jsb_physics_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_physics_auto.h
     )
 endif()
 
@@ -1889,8 +1902,6 @@ cocos_source_files(
     cocos/3d/misc/Buffer.h
     cocos/3d/misc/Buffer.cpp
 
-    # cocos/3d/skeletal-animation/DataPoolManager.h
-    # cocos/3d/skeletal-animation/DataPoolManager.cpp
     cocos/3d/skeletal-animation/SkeletalAnimationUtils.h
     cocos/3d/skeletal-animation/SkeletalAnimationUtils.cpp
 )
@@ -1903,19 +1914,11 @@ cocos_source_files(
 
     cocos/core/DataView.h
     cocos/core/DataView.cpp
-    # cocos/core/Director.cpp
-    # cocos/core/Director.h
-    # cocos/core/Game.cpp
-    # cocos/core/Game.h
     cocos/core/Root.cpp
     cocos/core/Root.h
 
     cocos/core/System.h
 
-    # cocos/core/Scheduler.cpp
-    # cocos/core/Scheduler.h
-    # cocos/core/SplashScreen.cpp
-    # cocos/core/SplashScreen.h
     cocos/core/Types.h
     cocos/core/Types.cpp
     cocos/core/TypedArray.h
@@ -1929,64 +1932,6 @@ cocos_source_files(
     cocos/core/memop/RecyclePool.cpp
 
 
-    # cocos/core/asset-manager/AssetManager.cpp
-    # cocos/core/asset-manager/AssetManager.h
-    # cocos/core/asset-manager/AssetManagerModuleHeader.h
-    # cocos/core/asset-manager/Bundle.cpp
-    # cocos/core/asset-manager/Bundle.h
-    # cocos/core/asset-manager/Cache.cpp
-    # cocos/core/asset-manager/Cache.h
-    # cocos/core/asset-manager/CacheManager.cpp
-    # cocos/core/asset-manager/CacheManager.h
-    # cocos/core/asset-manager/AssetManagerConfig.cpp
-    # cocos/core/asset-manager/AssetManagerConfig.h
-    # cocos/core/asset-manager/DependMaps.cpp
-    # cocos/core/asset-manager/DependMaps.h
-    # cocos/core/asset-manager/DependUtil.cpp
-    # cocos/core/asset-manager/DependUtil.h
-    # cocos/core/asset-manager/Deserialize.cpp
-    # cocos/core/asset-manager/Deserialize.h
-    # cocos/core/asset-manager/DownloadFile.cpp
-    # cocos/core/asset-manager/DownloadFile.h
-    # cocos/core/asset-manager/DownloadImage.cpp
-    # cocos/core/asset-manager/DownloadImage.h
-    # cocos/core/asset-manager/DownloadScript.cpp
-    # cocos/core/asset-manager/DownloadScript.h
-    # cocos/core/asset-manager/Downloader.cpp
-    # cocos/core/asset-manager/Downloader.h
-    # cocos/core/asset-manager/Factory.cpp
-    # cocos/core/asset-manager/Factory.h
-    # cocos/core/asset-manager/Fetch.cpp
-    # cocos/core/asset-manager/Fetch.h
-    # cocos/core/asset-manager/Helper.cpp
-    # cocos/core/asset-manager/Helper.h
-    # cocos/core/asset-manager/Load.cpp
-    # cocos/core/asset-manager/Load.h
-    # cocos/core/asset-manager/PackManager.cpp
-    # cocos/core/asset-manager/PackManager.h
-    # cocos/core/asset-manager/Parser.cpp
-    # cocos/core/asset-manager/Parser.h
-    # cocos/core/asset-manager/Pipeline.cpp
-    # cocos/core/asset-manager/Pipeline.h
-    # cocos/core/asset-manager/PlistParser.cpp
-    # cocos/core/asset-manager/PlistParser.h
-    # cocos/core/asset-manager/PreProcess.cpp
-    # cocos/core/asset-manager/PreProcess.h
-    # cocos/core/asset-manager/ReleaseManager.cpp
-    # cocos/core/asset-manager/ReleaseManager.h
-    # cocos/core/asset-manager/RequestItem.cpp
-    # cocos/core/asset-manager/RequestItem.h
-    # cocos/core/asset-manager/Shared.cpp
-    # cocos/core/asset-manager/Shared.h
-    # cocos/core/asset-manager/Task.cpp
-    # cocos/core/asset-manager/Task.h
-    # cocos/core/asset-manager/UrlTransformer.cpp
-    # cocos/core/asset-manager/UrlTransformer.h
-    # cocos/core/asset-manager/Utilities.cpp
-    # cocos/core/asset-manager/Utilities.h
-    # cocos/core/asset-manager/WeakCache.cpp
-    # cocos/core/asset-manager/WeakCache.h
-
     cocos/core/assets/Asset.cpp
     cocos/core/assets/Asset.h
     cocos/core/assets/AssetEnum.cpp
@@ -1998,12 +1943,8 @@ cocos_source_files(
     cocos/core/assets/EffectAsset.h
     cocos/core/assets/ImageAsset.cpp
     cocos/core/assets/ImageAsset.h
-    # cocos/core/assets/JsonAsset.cpp
-    # cocos/core/assets/JsonAsset.h
     cocos/core/assets/Material.cpp
     cocos/core/assets/Material.h
-    # cocos/core/assets/Prefab.cpp
-    # cocos/core/assets/Prefab.h
     cocos/core/assets/RenderTexture.cpp
     cocos/core/assets/RenderTexture.h
     cocos/core/assets/RenderingSubMesh.cpp
@@ -2129,48 +2070,48 @@ cocos_source_files(
 
 ######## auto
 cocos_source_files(
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_cocos_auto.cpp
-                            cocos/bindings/auto/jsb_cocos_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_extension_auto.cpp
-                            cocos/bindings/auto/jsb_extension_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_gfx_auto.cpp
-                            cocos/bindings/auto/jsb_gfx_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_network_auto.cpp
-                            cocos/bindings/auto/jsb_network_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_pipeline_auto.cpp
-                            cocos/bindings/auto/jsb_pipeline_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_scene_auto.cpp
-                            cocos/bindings/auto/jsb_scene_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_gi_auto.cpp
-                            cocos/bindings/auto/jsb_gi_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_assets_auto.cpp
-                            cocos/bindings/auto/jsb_assets_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_geometry_auto.cpp
-                            cocos/bindings/auto/jsb_geometry_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_render_auto.cpp
-                            cocos/bindings/auto/jsb_render_auto.h
-    NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_2d_auto.cpp
-                            cocos/bindings/auto/jsb_2d_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_network_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_network_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_cocos_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_cocos_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_extension_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_extension_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_gfx_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_gfx_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_pipeline_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_pipeline_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_scene_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_scene_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_gi_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_gi_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_assets_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_assets_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_geometry_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_geometry_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_render_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_render_auto.h
+    NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_2d_auto.cpp
+                            ${SWIG_OUTPUT}/jsb_2d_auto.h
 )
 
 if(USE_AUDIO)
     cocos_source_files(
-        NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_audio_auto.cpp
-                                cocos/bindings/auto/jsb_audio_auto.h
+        NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_audio_auto.cpp
+                                ${SWIG_OUTPUT}/jsb_audio_auto.h
     )
 endif()
 
 if(USE_VIDEO)
     cocos_source_files(
-        NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_video_auto.cpp
-                                cocos/bindings/auto/jsb_video_auto.h
+        NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_video_auto.cpp
+                                ${SWIG_OUTPUT}/jsb_video_auto.h
     )
 endif()
 
 if(USE_WEBVIEW)
     cocos_source_files(
-        NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_webview_auto.cpp
-                                cocos/bindings/auto/jsb_webview_auto.h
+        NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_webview_auto.cpp
+                                ${SWIG_OUTPUT}/jsb_webview_auto.h
     )
 endif()
 
@@ -2201,8 +2142,8 @@ if(USE_MIDDLEWARE)
     )
 
     cocos_source_files(
-        NO_WERROR   NO_UBUILD   cocos/bindings/auto/jsb_editor_support_auto.cpp
-                                cocos/bindings/auto/jsb_editor_support_auto.h
+        NO_WERROR   NO_UBUILD   ${SWIG_OUTPUT}/jsb_editor_support_auto.cpp
+                                ${SWIG_OUTPUT}/jsb_editor_support_auto.h
     )
 
     if(USE_SPINE)
@@ -2372,8 +2313,8 @@ if(USE_MIDDLEWARE)
 
         )
         cocos_source_files(
-        NO_WERROR       cocos/bindings/auto/jsb_spine_auto.cpp
-                        cocos/bindings/auto/jsb_spine_auto.h
+        NO_WERROR       ${SWIG_OUTPUT}/jsb_spine_auto.cpp
+                        ${SWIG_OUTPUT}/jsb_spine_auto.h
         NO_WERROR       cocos/bindings/manual/jsb_spine_manual.cpp
                         cocos/bindings/manual/jsb_spine_manual.h
         )
@@ -2468,8 +2409,8 @@ if(USE_MIDDLEWARE)
 
         )
         cocos_source_files(
-            NO_WERROR    cocos/bindings/auto/jsb_dragonbones_auto.cpp
-                         cocos/bindings/auto/jsb_dragonbones_auto.h
+            NO_WERROR    ${SWIG_OUTPUT}/jsb_dragonbones_auto.cpp
+                         ${SWIG_OUTPUT}/jsb_dragonbones_auto.h
             NO_WERROR    cocos/bindings/manual/jsb_dragonbones_manual.cpp
                          cocos/bindings/manual/jsb_dragonbones_manual.h
         )
@@ -2930,6 +2871,9 @@ endif()
 
 add_library(${ENGINE_NAME} ${COCOS_SOURCE_LIST})
 
+if(CMAKE_GENERATOR STREQUAL "Xcode")
+    add_dependencies(${ENGINE_NAME} genbindings)
+endif()
 if(USE_MODULES)
     target_link_libraries(${ENGINE_NAME} PUBLIC
         ccmath
@@ -3089,6 +3033,8 @@ target_include_directories(${ENGINE_NAME}
         ${CWD}/cocos/platform
         ${CWD}/cocos/renderer/core
         ${CWD}/cocos/editor-support
+        ${SWIG_OUTPUT_ROOT}
+        ${SWIG_OUTPUT_ROOT}/cocos
         $<$<BOOL:USE_SE_V8>:${CWD}/cocos/bindings/jswrapper>
     PRIVATE
         ${CC_EXTERNAL_PRIVATE_INCLUDES}
@@ -3240,8 +3186,26 @@ elseif(LINUX)
     )
 endif()
 
+### set source_group for generated files
+set(COCOS_SOURCE_LIST_EXCLUDE_GENRATED ${COCOS_SOURCE_LIST})
+set(COCOS_GENERATED_LIST)
+foreach(src IN LISTS COCOS_SOURCE_LIST_EXCLUDE_GENRATED)
+    get_source_file_property(IS_GENERATED ${src} GENERATED)
+    if(IS_GENERATED) 
+        list(REMOVE_ITEM COCOS_SOURCE_LIST_EXCLUDE_GENRATED ${src})
+        list(APPEND COCOS_GENERATED_LIST ${src})
+    endif()
+endforeach()
+
+source_group(TREE ${SWIG_OUTPUT_ROOT} PREFIX "Source Files/generated" FILES ${COCOS_GENERATED_LIST})
+
+add_custom_target(genbindings
+    DEPENDS ${COCOS_GENERATED_LIST}
+)
+set_target_properties(genbindings PROPERTIES FOLDER Utils)
+
 if(USE_BUILTIN_EXTERNAL)
-    set(EXCLUDE_EXTERANL_LIST ${COCOS_SOURCE_LIST})
+    set(EXCLUDE_EXTERANL_LIST ${COCOS_SOURCE_LIST_EXCLUDE_GENRATED})
     foreach(x IN LISTS CC_EXTERNAL_SOURCES)
         list(REMOVE_ITEM EXCLUDE_EXTERANL_LIST ${x})
     endforeach()
@@ -3257,13 +3221,13 @@ if(USE_BUILTIN_EXTERNAL)
     endif()
 else()
     if(USE_XR OR USE_AR_MODULE)
-        set(EXCLUDE_XR_LIST ${COCOS_SOURCE_LIST})
+        set(EXCLUDE_XR_LIST ${COCOS_SOURCE_LIST_EXCLUDE_GENRATED})
         foreach(x IN LISTS XR_COMMON_SOURCES)
             list(REMOVE_ITEM EXCLUDE_XR_LIST ${x})
         endforeach()
         source_group(TREE ${CWD} PREFIX "Source Files" FILES ${EXCLUDE_XR_LIST})
         source_group(TREE ${XR_COMMON_PATH} PREFIX "Source Files/common" FILES ${XR_COMMON_SOURCES})
     else()
-        source_group(TREE ${CWD} PREFIX "Source Files" FILES ${COCOS_SOURCE_LIST})
+        source_group(TREE ${CWD} PREFIX "Source Files" FILES ${COCOS_SOURCE_LIST_EXCLUDE_GENRATED})
     endif()
 endif()

@@ -380,11 +380,17 @@ static bool JSB_core_restartVM(se::State &s) { // NOLINT
 }
 SE_BIND_FUNC(JSB_core_restartVM)
 
-static bool JSB_closeWindow(se::State &s) {
+static bool JSB_closeWindow(se::State &s) { // NOLINT
     CC_CURRENT_APPLICATION()->close();
     return true;
 }
 SE_BIND_FUNC(JSB_closeWindow)
+
+static bool JSB_exit(se::State &s) { // NOLINT
+    BasePlatform::getPlatform()->exit();
+    return true;
+}
+SE_BIND_FUNC(JSB_exit);
 
 static bool JSB_isObjectValid(se::State &s) { // NOLINT
     const auto &args = s.args();
@@ -872,13 +878,13 @@ static bool JSB_showInputBox(se::State &s) { // NOLINT
         if (obj->getProperty("fontSize", &tmp)) {
             SE_PRECONDITION2(tmp.isNumber(), false, "fontSize is invalid!");
             if (!tmp.isUndefined()) {
-                showInfo.fontSize = tmp.toDouble();
+                showInfo.fontSize = tmp.toUint32();
             }
         }
         if (obj->getProperty("fontColor", &tmp)) {
             SE_PRECONDITION2(tmp.isNumber(), false, "fontColor is invalid!");
             if (!tmp.isUndefined()) {
-                showInfo.fontColor = tmp.toDouble();
+                showInfo.fontColor = tmp.toUint32();
             }
         }
         if (obj->getProperty("isBold", &tmp)) {
@@ -902,25 +908,25 @@ static bool JSB_showInputBox(se::State &s) { // NOLINT
         if (obj->getProperty("underlineColor", &tmp)) {
             SE_PRECONDITION2(tmp.isNumber(), false, "underlinrColor is invalid!");
             if (!tmp.isUndefined()) {
-                showInfo.underlineColor = tmp.toDouble();
+                showInfo.underlineColor = tmp.toUint32();
             }
         }
         if (obj->getProperty("backColor", &tmp)) {
             SE_PRECONDITION2(tmp.isNumber(), false, "backColor is invalid!");
             if (!tmp.isUndefined()) {
-                showInfo.backColor = tmp.toDouble();
+                showInfo.backColor = tmp.toUint32();
             }
         }
         if (obj->getProperty("backgroundColor", &tmp)) {
             SE_PRECONDITION2(tmp.isNumber(), false, "backgroundColor is invalid!");
             if (!tmp.isUndefined()) {
-                showInfo.backgroundColor = tmp.toDouble();
+                showInfo.backgroundColor = tmp.toUint32();
             }
         }
         if (obj->getProperty("textAlignment", &tmp)) {
             SE_PRECONDITION2(tmp.isNumber(), false, "textAlignment is invalid!");
             if (!tmp.isUndefined()) {
-                showInfo.textAlignment = tmp.toDouble();
+                showInfo.textAlignment = tmp.toUint32();
             }
         }
         EditBox::show(showInfo);
@@ -999,7 +1005,7 @@ static bool JSB_zipUtils_inflateMemory(se::State &s) { // NOLINT
         }
         SE_PRECONDITION2(ok, false, "args[0] is not in type of string | ArrayBuffer | TypedArray");
         unsigned char *arg2 = nullptr;
-        int32_t len = 0;
+        uint32_t len = 0;
         if (argc == 1) {
             len = ZipUtils::inflateMemory(arg0, static_cast<uint32_t>(arg1), &arg2);
         } else if (argc == 2) {
@@ -1431,6 +1437,7 @@ bool jsb_register_global_variables(se::Object *global) { // NOLINT
     global->defineFunction("__restartVM", _SE(JSB_core_restartVM));
     global->defineFunction("__close", _SE(JSB_closeWindow));
     global->defineFunction("__isObjectValid", _SE(JSB_isObjectValid));
+    global->defineFunction("__exit", _SE(JSB_exit));
 
     se::HandleObject performanceObj(se::Object::createPlainObject());
     performanceObj->defineFunction("now", _SE(js_performance_now));

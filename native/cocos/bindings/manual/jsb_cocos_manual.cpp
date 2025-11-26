@@ -388,7 +388,7 @@ static bool js_CanvasRenderingContext2D_setCanvasBufferUpdatedCallback(se::State
                     thisObj->unroot();
                 }
                 jsFunc.toObject()->unroot();
-                arg0 = lambda;
+                arg0 = std::move(lambda);
             } else {
                 arg0 = nullptr;
             }
@@ -650,7 +650,7 @@ static bool js_se_setExceptionCallback(se::State &s) { // NOLINT(readability-ide
     if (s.thisObject()) {
         s.thisObject()->attachObject(objFunc); // prevent GC
     } else {
-        //prevent GC in C++ & JS
+        // prevent GC in C++ & JS
         objFunc->root();
     }
 
